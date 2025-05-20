@@ -5,59 +5,63 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 from langdetect import detect
 
-# Enable logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# Logging setup
+logging.basicConfig(level=logging.INFO)
 
-TOKEN = os.getenv("TOKEN")  # Get your bot token from Render environment variables
+# Load Telegram token from environment
+TOKEN = os.getenv("TOKEN")
 
+# Languages we're supporting
 LANGUAGES = {
     'en': 'English',
     'pl': 'Polish',
     'ru': 'Russian'
 }
 
-TRANSLATE_URL = "https://libretranslate.com/translate"
+# ✅ Official public LibreTranslate API endpoint
+BASE_URL = "https://libretranslate.com"
 
 def translate(text, source_lang, target_lang):
     try:
-        response = requests.post(TRANSLATE_URL, data={
-            'q': text,
-            'source': source_lang,
-            'target': target_lang,
-            'format': 'text'
-        }, timeout=5)
-
+        response = requests.post(
+            f"{BASE_URL}/translate",
+            json={
+                'q': text,
+                'source': source_lang,
+                'target': target_lang,
+                'format': 'text'
+            },
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
+        response.raise_for_status()
         result = response.json()
-        return result['translatedText']
+        return result.get("translatedText", "[Translation failed]")
     except Exception as e:
         logging.error(f"Translation error: {e}")
         return "[Translation failed]"
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message.text
-    logging.info(f"Received message: {message}")
+    text = update.message.text
 
     try:
-        detected_lang = detect(message)
+        detected_lang = detect(text)
+        logging.info(f"Detected language: {detected_lang}")
     except Exception:
         await update.message.reply_text("Could not detect language.")
         return
 
     if detected_lang not in LANGUAGES:
-        await update.message.reply_text("Supported languages: English, Polish, Russian.")
+        await update.message.reply_text("Only English, Polish, and Russian are supported.")
         return
 
     translations = []
     for lang_code in LANGUAGES:
         if lang_code != detected_lang:
-            translated = translate(message, detected_lang, lang_code)
+            translated = translate(text, detected_lang, lang_code)
             translations.append(f"{LANGUAGES[lang_code]}: {translated}")
 
-    reply = "\n".join(translations)
-    await update.message.reply_text(reply)
+    await update.message.reply_text("\n".join(translations))
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
