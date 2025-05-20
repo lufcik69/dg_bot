@@ -22,16 +22,22 @@ lang_map = {
 }
 
 # Translate using LibreTranslate API
-from googletrans import Translator
-
-translator = Translator()
+from translate import Translator
 
 def translate(text, target_lang):
     try:
-        result = translator.translate(text, dest=target_lang)
-        return result.text
+        # Map ISO codes for `translate` library
+        lang_alias = {
+            'en': 'english',
+            'pl': 'polish',
+            'ru': 'russian'
+        }
+
+        translator = Translator(to_lang=lang_alias[target_lang])
+        result = translator.translate(text)
+        return result
     except Exception as e:
-        logging.error(f"Translation failed: {e}")
+        logging.error(f"Translation error: {e}")
         return "[Translation failed]"
 
 # Telegram message handler
