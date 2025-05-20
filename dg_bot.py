@@ -8,9 +8,8 @@ from langdetect import detect
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 
-# Env variables
 TOKEN = os.getenv("TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # e.g. https://your-app-name.onrender.com
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 LANGUAGES = {
     'en': 'English',
@@ -52,13 +51,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("\n".join(translations))
 
-
+# --- Webhook entrypoint ---
 if __name__ == "__main__":
     from aiohttp import web
     import asyncio
 
     async def main():
-        app = ApplicationBuilder().token(TOKEN).webhook_mode(True).build()
+        app = ApplicationBuilder().token(TOKEN).build()
         app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
         await app.initialize()
