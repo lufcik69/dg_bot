@@ -1,3 +1,3 @@
 python-telegram-bot==20.7
 langdetect
-translate
+deep-translator==1.11.4
