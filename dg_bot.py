@@ -56,15 +56,16 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
+    from aiohttp import web
+
+async def health_check(request):
+    return web.Response(text="Bot is alive!")
+
+app.web_app.add_routes([web.get("/", health_check)])
+
     # ✅ This starts the webhook properly
     app.run_webhook(
         listen="0.0.0.0",
         port=int(os.getenv("PORT", 8000)),
         webhook_url=f"{WEBHOOK_URL}/webhook"
     )
-from aiohttp import web
-
-async def health_check(request):
-    return web.Response(text="Bot is alive!")
-
-app.web_app.add_routes([web.get("/", health_check)])
