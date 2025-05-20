@@ -62,3 +62,9 @@ if __name__ == "__main__":
         port=int(os.getenv("PORT", 8000)),
         webhook_url=f"{WEBHOOK_URL}/webhook"
     )
+from aiohttp import web
+
+async def health_check(request):
+    return web.Response(text="Bot is alive!")
+
+app.web_app.add_routes([web.get("/", health_check)])
