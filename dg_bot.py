@@ -1,55 +1,70 @@
 import logging
+import os
+import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 from langdetect import detect
-from deep_translator import GoogleTranslator
 
-# Enable logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# Logging
+logging.basicConfig(level=logging.INFO)
 
-# Replace with your own bot token
-TOKEN = "7493784409:AAEFXLxPQeE97wA6v337Xz-sh2EgmOI42Kc"
+# Get Telegram Bot Token from environment
+TOKEN = os.getenv("TOKEN")
 
-# Function to handle messages
+# LibreTranslate API (you can self-host or use their public instance)
+TRANSLATE_API = "https://libretranslate.com/translate"
+
+# Supported languages
+lang_map = {
+    'en': 'English',
+    'pl': 'Polish',
+    'ru': 'Russian'
+}
+
+# Translate using LibreTranslate API
+def translate(text, source_lang, target_lang):
+    try:
+        response = requests.post(
+            TRANSLATE_API,
+            data={
+                "q": text,
+                "source": source_lang,
+                "target": target_lang,
+                "format": "text"
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        return response.json().get("translatedText", "[Translation failed]")
+    except Exception as e:
+        logging.error(f"Translation error: {e}")
+        return "[Translation error]"
+
+# Telegram message handler
 async def translate_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     original_text = update.message.text
+    logging.info(f"Received: {original_text}")
 
     try:
         source_lang = detect(original_text)
-    except:
-        await update.message.reply_text("Sorry, I couldn't detect the language.")
+    except Exception as e:
+        logging.warning(f"Language detection failed: {e}")
+        await update.message.reply_text("Could not detect language.")
         return
 
-    lang_map = {
-        'en': 'English',
-        'pl': 'Polish',
-        'ru': 'Russian'
-    }
-
     if source_lang not in lang_map:
-        await update.message.reply_text("Only Polish, Russian, and English are supported.")
+        await update.message.reply_text("Only English, Polish, and Russian are supported.")
         return
 
     translations = []
-    for lang_code in ['en', 'pl', 'ru']:
-        if lang_code != source_lang:
-            try:
-                translated = GoogleTranslator(source=source_lang, target=lang_code).translate(original_text)
-                translations.append(f"{lang_map[lang_code]}: {translated}")
-            except:
-                translations.append(f"{lang_map[lang_code]}: [Translation failed]")
+    for target_lang in ['en', 'pl', 'ru']:
+        if target_lang != source_lang:
+            translated = translate(original_text, source_lang, target_lang)
+            translations.append(f"{lang_map[target_lang]}: {translated}")
 
-    response = "\n".join(translations)
-    await update.message.reply_text(response)
+    await update.message.reply_text("\n".join(translations))
 
-# Main function to start the bot
+# Start the bot
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
-
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), translate_message))
-
-    print("Bot is running...")
     app.run_polling()
