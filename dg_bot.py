@@ -1,15 +1,16 @@
 import os
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
-from telegram import Update
-from langdetect import detect
-import requests
 import logging
+import requests
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from langdetect import detect
 
-# Logging
+# Logging setup
 logging.basicConfig(level=logging.INFO)
 
+# Env variables
 TOKEN = os.getenv("TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Full URL e.g. https://your-app.onrender.com/webhook
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # e.g. https://your-app-name.onrender.com
 
 LANGUAGES = {
     'en': 'English',
@@ -51,21 +52,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("\n".join(translations))
 
-async def main():
+if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
-    # Start webhook instead of polling
-    await app.start()
-    await app.bot.set_webhook(url=f"{WEBHOOK_URL}/webhook")
-    await app.updater.start_webhook(
+    # ✅ This starts the webhook properly
+    app.run_webhook(
         listen="0.0.0.0",
         port=int(os.getenv("PORT", 8000)),
-        url_path="webhook",
         webhook_url=f"{WEBHOOK_URL}/webhook"
     )
-    await app.updater.idle()
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
