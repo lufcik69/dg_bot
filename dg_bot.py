@@ -22,23 +22,16 @@ lang_map = {
 }
 
 # Translate using LibreTranslate API
+from googletrans import Translator
+
+translator = Translator()
+
 def translate(text, target_lang):
     try:
-        url = "https://translate.googleapis.com/translate_a/single"
-        params = {
-            "client": "gtx",
-            "sl": "auto",  # auto-detect source language
-            "tl": target_lang,
-            "dt": "t",
-            "q": text
-        }
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        translated_text = ''.join([i[0] for i in data[0]])
-        return translated_text
+        result = translator.translate(text, dest=target_lang)
+        return result.text
     except Exception as e:
-        logging.error(f"Google Translate error: {e}")
+        logging.error(f"Translation failed: {e}")
         return "[Translation failed]"
 
 # Telegram message handler
