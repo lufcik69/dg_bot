@@ -19,7 +19,7 @@ LANGUAGES = {
     'ru': 'Russian'
 }
 
-TRANSLATE_URL = "https://libretranslate.de/translate"
+TRANSLATE_URL = "https://libretranslate.com/translate"
 
 def translate(text, source_lang, target_lang):
     try:
