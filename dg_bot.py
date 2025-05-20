@@ -9,7 +9,7 @@ from langdetect import detect
 logging.basicConfig(level=logging.INFO)
 
 # Get Telegram Bot Token from environment
-TOKEN = os.getenv("T7493784409:AAEFXLxPQeE97wA6v337Xz-sh2EgmOI42Kc")
+TOKEN = os.getenv("TOKEN")
 
 # LibreTranslate API (you can self-host or use their public instance)
 TRANSLATE_API = "https://libretranslate.com/translate"
