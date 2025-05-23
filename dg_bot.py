@@ -1,35 +1,21 @@
 import os
-import logging
-import requests
-from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder, ContextTypes,
-    MessageHandler, filters
-)
+import discord
+from discord.ext import commands
 from langdetect import detect
-import asyncio
+import requests
 
-# Logging setup
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-
-# Environment Variables
-TOKEN = os.getenv("TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # e.g. https://your-bot-name.onrender.com
-PORT = int(os.getenv("PORT", 8000))
-
-logging.info(f"Using PORT: {PORT}")
-logging.info(f"Using WEBHOOK_URL: {WEBHOOK_URL}")
-
-# Language config
-LANGUAGES = {'en': 'English', 'pl': 'Polish', 'ru': 'Russian'}
+TOKEN = os.getenv("DISCORD_TOKEN")  # Put your Discord bot token in Render's env
 BASE_URL = "https://libretranslate.com"
+LANGUAGES = {'en': 'English', 'pl': 'Polish', 'ru': 'Russian'}
 
-# Translation function
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
 def translate(text, source_lang, target_lang):
     try:
-        res = requests.post(
+        response = requests.post(
             f"{BASE_URL}/translate",
             json={
                 "q": text,
@@ -40,48 +26,37 @@ def translate(text, source_lang, target_lang):
             headers={"Content-Type": "application/json"},
             timeout=10
         )
-        return res.json().get("translatedText", "[Translation failed]")
+        return response.json().get("translatedText", "[Translation failed]")
     except Exception as e:
-        logging.error(f"Translation error: {e}")
+        print(f"Translation error: {e}")
         return "[Translation failed]"
 
-# Message handler
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    text = message.content
+
     try:
         detected = detect(text)
     except:
-        await update.message.reply_text("Could not detect language.")
+        await message.channel.send("❌ Could not detect language.")
         return
 
     if detected not in LANGUAGES:
-        await update.message.reply_text("Only English, Polish, and Russian are supported.")
+        await message.channel.send("❌ Only English, Polish, and Russian are supported.")
         return
 
     translations = [
-        f"{LANGUAGES[lang]}: {translate(text, detected, lang)}"
+        f"**{LANGUAGES[lang]}**: {translate(text, detected, lang)}"
         for lang in LANGUAGES if lang != detected
     ]
-    await update.message.reply_text("\n".join(translations))
 
-# Main bot startup
-async def main():
-    application = ApplicationBuilder().token(TOKEN).build()
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    await message.channel.send("\n".join(translations))
 
-    await application.initialize()
-    await application.start()
-
-    await application.updater.start_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path="/webhook",
-        webhook_url=f"{WEBHOOK_URL}/webhook"
-    )
-
-    logging.info("✅ Webhook started and listening.")
-    await application.updater.idle()
-    logging.info("⏹️ Bot stopped.")
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    await bot.process_commands(message)  # Keeps bot commands working if needed
